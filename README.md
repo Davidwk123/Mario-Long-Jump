@@ -1,4 +1,4 @@
-# MarioLongJump
+# Mario-Long-Jump
 
 Part of the movement mechanic in Super Mario 3D World Developed with Unreal Engine 5.
 
