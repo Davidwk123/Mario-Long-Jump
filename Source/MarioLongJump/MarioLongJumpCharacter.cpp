@@ -10,14 +10,19 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "MarioLongJumpMovementComponent.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 //////////////////////////////////////////////////////////////////////////
 // AMarioLongJumpCharacter
 
-AMarioLongJumpCharacter::AMarioLongJumpCharacter()
+AMarioLongJumpCharacter::AMarioLongJumpCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer.SetDefaultSubobjectClass<UMarioLongJumpMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
+
+	// Assign custom movement compenent to character's current movement component
+	MarioLongJumpMovementComponent = Cast<UMarioLongJumpMovementComponent>(GetCharacterMovement());
+
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 		

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
+
 #include "MarioLongJumpCharacter.generated.h"
 
 class USpringArmComponent;
@@ -19,6 +20,10 @@ UCLASS(config=Game)
 class AMarioLongJumpCharacter : public ACharacter
 {
 	GENERATED_BODY()
+
+	/** Custom movement component */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = movement, meta = (AllowPrivateAccess = "true"))
+	class UMarioLongJumpMovementComponent* MarioLongJumpMovementComponent;
 
 	/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -45,7 +50,8 @@ class AMarioLongJumpCharacter : public ACharacter
 	UInputAction* LookAction;
 
 public:
-	AMarioLongJumpCharacter();
+	// Added a parameter that will set old movement component to custom one 
+	AMarioLongJumpCharacter(const FObjectInitializer& ObjectInitializer);
 	
 
 protected:
@@ -70,4 +76,3 @@ public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 };
-
