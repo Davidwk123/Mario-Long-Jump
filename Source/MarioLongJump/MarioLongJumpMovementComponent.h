@@ -17,11 +17,10 @@ class MARIOLONGJUMP_API UMarioLongJumpMovementComponent : public UCharacterMovem
 public:
 	UMarioLongJumpMovementComponent();
 
-	UPROPERTY(EditDefaultsOnly)
-	float CurrnetMaxWalkSpeed;
-
 protected:
 	// Funtion used to update movement 
 	virtual void OnMovementUpdated(float DeltaSeconds, const FVector& OldLocation, const FVector& OldVelocity) override;
+
+
 
 };

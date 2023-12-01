@@ -89,6 +89,10 @@ void AMarioLongJumpCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AMarioLongJumpCharacter::Move);
 
+		// Crouching
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &AMarioLongJumpCharacter::Crouch);
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AMarioLongJumpCharacter::UnCrouch);
+
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AMarioLongJumpCharacter::Look);
 	}
@@ -132,4 +136,14 @@ void AMarioLongJumpCharacter::Look(const FInputActionValue& Value)
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
+}
+
+void AMarioLongJumpCharacter::Crouch(const FInputActionValue& Value)
+{
+	Super::Crouch(false);
+}
+
+void AMarioLongJumpCharacter::UnCrouch(const FInputActionValue& Value)
+{
+	Super::UnCrouch(false);
 }
