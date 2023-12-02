@@ -21,6 +21,7 @@ protected:
 	// Funtion used to update movement 
 	virtual void OnMovementUpdated(float DeltaSeconds, const FVector& OldLocation, const FVector& OldVelocity) override;
 
-
+	// Overrided function to check if the character can jump
+	virtual bool CanAttemptJump() const override;
 
 };

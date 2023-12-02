@@ -11,3 +11,8 @@ void UMarioLongJumpMovementComponent::OnMovementUpdated(float DeltaSeconds, cons
 	Super::OnMovementUpdated(DeltaSeconds, OldLocation, OldVelocity);
 }
 
+bool UMarioLongJumpMovementComponent::CanAttemptJump() const
+{
+	return IsJumpAllowed() && (IsMovingOnGround() || IsFalling()); // Falling included for double-jump and non-zero jump hold time, but validated by character.
+}
+

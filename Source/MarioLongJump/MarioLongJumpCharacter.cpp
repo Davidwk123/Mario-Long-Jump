@@ -147,3 +147,8 @@ void AMarioLongJumpCharacter::UnCrouch(const FInputActionValue& Value)
 {
 	Super::UnCrouch(false);
 }
+
+bool AMarioLongJumpCharacter::CanJumpInternal_Implementation() const
+{
+	return JumpIsAllowedInternal();
+}

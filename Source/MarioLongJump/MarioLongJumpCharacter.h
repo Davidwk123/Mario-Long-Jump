@@ -68,6 +68,9 @@ protected:
 	/** Called for Crouch input */
 	void Crouch(const FInputActionValue& Value);
 	void UnCrouch(const FInputActionValue& Value);
+
+	// Overrided Ufunction to check if the character can jump
+	bool CanJumpInternal_Implementation() const override;
 			
 
 protected:
