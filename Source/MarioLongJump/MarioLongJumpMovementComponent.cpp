@@ -16,3 +16,13 @@ bool UMarioLongJumpMovementComponent::CanAttemptJump() const
 	return IsJumpAllowed() && (IsMovingOnGround() || IsFalling()); // Falling included for double-jump and non-zero jump hold time, but validated by character.
 }
 
+bool UMarioLongJumpMovementComponent::CanCrouchInCurrentState() const
+{
+	if (!CanEverCrouch())
+	{
+		return false;
+	}
+
+	return IsMovingOnGround() && UpdatedComponent && !UpdatedComponent->IsSimulatingPhysics();
+}
+

@@ -24,4 +24,7 @@ protected:
 	// Overrided function to check if the character can jump
 	virtual bool CanAttemptJump() const override;
 
+	// Overrided function to check if the character can crouch
+	virtual bool CanCrouchInCurrentState() const override;
+
 };
