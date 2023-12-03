@@ -43,3 +43,22 @@ bool UMarioLongJumpMovementComponent::GetSlideSurface(FHitResult& SurfaceHit)
 	return GetWorld()->LineTraceSingleByProfile(SurfaceHit, Start, End, TEXT("BlockAll"), MarioLongJumpCharacterOwner->GetIgnoreCharacterParams());
 }
 
+void UMarioLongJumpMovementComponent::EnterSlide()
+{
+	// Applies impluse velocity when users enters slide
+	Velocity += Velocity.GetSafeNormal2D() * SlideImpluseSpeed;
+
+	SetMovementMode(MOVE_Custom, CMOVE_Slide);
+}
+
+void UMarioLongJumpMovementComponent::ExitSlide()
+{
+	bWantsToCrouch = false;
+
+	FHitResult Surfacehit;
+	FQuat NewRotation = FRotationMatrix::MakeFromXZ(UpdatedComponent->GetForwardVector().GetSafeNormal2D(), FVector::UpVector).ToQuat();
+
+	SafeMoveUpdatedComponent(FVector::ZeroVector, NewRotation, true, Surfacehit);
+	SetMovementMode(MOVE_Walking);
+}
+
