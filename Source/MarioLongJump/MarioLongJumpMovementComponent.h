@@ -17,7 +17,14 @@ class MARIOLONGJUMP_API UMarioLongJumpMovementComponent : public UCharacterMovem
 public:
 	UMarioLongJumpMovementComponent();
 
+	// Variable used to replace GetOwner() function call to be able to call custom functions 
+	UPROPERTY(Transient)
+	class AMarioLongJumpCharacter* MarioLongJumpCharacterOwner;
+	
 protected:
+	// Function used to setup component and connect custom characters variables 
+	virtual void InitializeComponent() override;
+
 	// Funtion used to update movement 
 	virtual void OnMovementUpdated(float DeltaSeconds, const FVector& OldLocation, const FVector& OldVelocity) override;
 
@@ -26,5 +33,9 @@ protected:
 
 	// Overrided function to check if the character can crouch
 	virtual bool CanCrouchInCurrentState() const override;
+
+private:
+	// Checks if character is on the ground first before sliding 
+	bool GetSlideSurface(FHitResult& SurfaceHit);
 
 };

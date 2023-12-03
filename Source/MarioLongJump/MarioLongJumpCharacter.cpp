@@ -59,6 +59,18 @@ AMarioLongJumpCharacter::AMarioLongJumpCharacter(const FObjectInitializer& Objec
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
 
+FCollisionQueryParams AMarioLongJumpCharacter::GetIgnoreCharacterParams() const
+{
+	FCollisionQueryParams QueryParams;
+	TArray<AActor*> ActorChildren;
+	GetAllChildActors(ActorChildren);
+
+	QueryParams.AddIgnoredActors(ActorChildren);
+	QueryParams.AddIgnoredActor(this);
+
+	return QueryParams;
+}
+
 void AMarioLongJumpCharacter::BeginPlay()
 {
 	// Call the base class  
@@ -140,12 +152,12 @@ void AMarioLongJumpCharacter::Look(const FInputActionValue& Value)
 
 void AMarioLongJumpCharacter::Crouch(const FInputActionValue& Value)
 {
-	Super::Crouch(false);
+	ACharacter::Crouch(false);
 }
 
 void AMarioLongJumpCharacter::UnCrouch(const FInputActionValue& Value)
 {
-	Super::UnCrouch(false);
+	ACharacter::UnCrouch(false);
 }
 
 bool AMarioLongJumpCharacter::CanJumpInternal_Implementation() const

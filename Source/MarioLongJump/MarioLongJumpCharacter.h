@@ -55,6 +55,9 @@ class AMarioLongJumpCharacter : public ACharacter
 public:
 	// Added a parameter that will set old movement component to custom one 
 	AMarioLongJumpCharacter(const FObjectInitializer& ObjectInitializer);
+
+	// Used to define Collision params when raycasts are called, used to prevent the casts from getting triggered by this character and other actors 
+	FCollisionQueryParams GetIgnoreCharacterParams() const;
 	
 
 protected:
