@@ -55,4 +55,7 @@ private:
 	// Functions that triggers the slide movement 
 	void EnterSlide();
 	void ExitSlide();
+
+	// Sliding functionality
+	void PhysSlide(float DeltaTime, int32 Iterations);
 };
