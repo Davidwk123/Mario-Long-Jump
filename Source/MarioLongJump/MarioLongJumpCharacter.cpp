@@ -41,6 +41,7 @@ AMarioLongJumpCharacter::AMarioLongJumpCharacter(const FObjectInitializer& Objec
 	GetCharacterMovement()->AirControl = 1.0f;
 	GetCharacterMovement()->MaxWalkSpeed = 500.f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
+	GetCharacterMovement()->MaxWalkSpeedCrouched = 200.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 
@@ -160,7 +161,3 @@ void AMarioLongJumpCharacter::UnCrouch(const FInputActionValue& Value)
 	ACharacter::UnCrouch(false);
 }
 
-bool AMarioLongJumpCharacter::CanJumpInternal_Implementation() const
-{
-	return JumpIsAllowedInternal();
-}
