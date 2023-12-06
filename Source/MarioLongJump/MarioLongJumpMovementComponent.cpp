@@ -1,10 +1,16 @@
 #include "MarioLongJumpMovementComponent.h"
 #include "MarioLongJumpCharacter.h"
+#include "Components/CapsuleComponent.h"
 
 UMarioLongJumpMovementComponent::UMarioLongJumpMovementComponent()
 {
 	NavAgentProps.bCanCrouch = true;
 	bCanWalkOffLedgesWhenCrouching = true;
+}
+
+bool UMarioLongJumpMovementComponent::IsCustomMovementMode(ECustomMovementMode InCustomMovementMode) const
+{
+	return (MovementMode == MOVE_Custom && CustomMovementMode == InCustomMovementMode);
 }
 
 void UMarioLongJumpMovementComponent::InitializeComponent()
@@ -14,14 +20,15 @@ void UMarioLongJumpMovementComponent::InitializeComponent()
 	MarioLongJumpCharacterOwner = Cast<AMarioLongJumpCharacter>(GetOwner());
 }
 
-void UMarioLongJumpMovementComponent::OnMovementUpdated(float DeltaSeconds, const FVector& OldLocation, const FVector& OldVelocity)
-{
-	Super::OnMovementUpdated(DeltaSeconds, OldLocation, OldVelocity);
-}
+//void UMarioLongJumpMovementComponent::OnMovementUpdated(float DeltaSeconds, const FVector& OldLocation, const FVector& OldVelocity)
+//{
+//	Super::OnMovementUpdated(DeltaSeconds, OldLocation, OldVelocity);
+//}
 
 bool UMarioLongJumpMovementComponent::CanAttemptJump() const
 {
-	return IsJumpAllowed() && (IsMovingOnGround() || IsFalling()); // Falling included for double-jump and non-zero jump hold time, but validated by character.
+	// Allow character to jump during slide movement as well
+	return Super::CanAttemptJump() || IsCustomMovementMode(CMOVE_Slide);
 }
 
 bool UMarioLongJumpMovementComponent::CanCrouchInCurrentState() const
@@ -30,24 +37,66 @@ bool UMarioLongJumpMovementComponent::CanCrouchInCurrentState() const
 	{
 		return false;
 	}
+	// Character only can crouch on the ground 
+	return (IsMovingOnGround()) && UpdatedComponent && !UpdatedComponent->IsSimulatingPhysics();
+}
 
-	return IsMovingOnGround() && UpdatedComponent && !UpdatedComponent->IsSimulatingPhysics();
+//bool UMarioLongJumpMovementComponent::IsMovingOnGround() const
+//{
+//	return Super::IsMovingOnGround();
+//}
+
+void UMarioLongJumpMovementComponent::UpdateCharacterStateBeforeMovement(float DeltaSeconds)
+{
+	// Check if character is walking and wants to crouch	
+	if (MovementMode == MOVE_Walking && bWantsToCrouch)
+	{
+		//UE_LOG(LogTemp, Warning, TEXT("walking and is croching"));
+		FHitResult PossibleSurfaceHit;
+		// Saftey checks
+		//UE_LOG(LogTemp, Warning, TEXT("Surfacehit is: %s"), (GetSlideSurface(PossibleSurfaceHit) ? TEXT("True") : TEXT("False")));
+		if (GetSlideSurface(PossibleSurfaceHit) && Velocity.SizeSquared() > pow(MinSlideSpeed, 2))
+		{
+			//UE_LOG(LogTemp, Warning, TEXT("enteringslide"));
+			EnterSlide();
+		}
+	}
+
+	// Check to exit slide
+	if (IsCustomMovementMode(CMOVE_Slide) && bWantsToCrouch == false)
+	{
+		SetMovementMode(MOVE_Walking);
+	}
+	
+	Super::UpdateCharacterStateBeforeMovement(DeltaSeconds);
+}
+
+void UMarioLongJumpMovementComponent::PhysCustom(float deltaTime, int32 Iterations)
+{
+	Super::PhysCustom(deltaTime, Iterations);
+
+	// Add a new case where the custom movement is called, then apply slide physics function
+	switch (CustomMovementMode)
+	{
+	case CMOVE_Slide:
+		PhysSlide(deltaTime, Iterations);
+		break;
+	default:
+		UE_LOG(LogTemp, Fatal, TEXT("Invalid Movement Mode"))
+	}
 }
 
 bool UMarioLongJumpMovementComponent::GetSlideSurface(FHitResult& SurfaceHit)
 {
 	// Create a raycast that is shot under the player to check if it hits any surface 
 	FVector Start = UpdatedComponent->GetComponentLocation();
-	FVector End = Start - UpdatedComponent->GetUpVector();
+	FVector End = Start + FVector::DownVector * MarioLongJumpCharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * 2.f;
 
 	return GetWorld()->LineTraceSingleByProfile(SurfaceHit, Start, End, TEXT("BlockAll"), MarioLongJumpCharacterOwner->GetIgnoreCharacterParams());
 }
 
 void UMarioLongJumpMovementComponent::EnterSlide()
 {
-	// Applies impluse velocity when users enters slide
-	Velocity += Velocity.GetSafeNormal2D() * SlideImpluseSpeed;
-
 	SetMovementMode(MOVE_Custom, CMOVE_Slide);
 }
 
@@ -98,7 +147,7 @@ void UMarioLongJumpMovementComponent::PhysSlide(float DeltaTime, int32 Iteration
 	// Strafe functionality, allows left and right movement when character is sliding
 	// First check if the dot product between the normalized acceleration(Acceleration is retrived from user's input WASD) and movement component's
 	// right vector is more then .5, meaning that the user had to press the 'A' or 'D' keys 
-	if (FMath::Abs(FVector::DotProduct(Acceleration.GetSafeNormal(), UpdatedComponent->GetRightVector())) > .5)
+	if (FMath::Abs(FVector::DotProduct(Acceleration.GetSafeNormal(), UpdatedComponent->GetRightVector())) > .9f)
 	{
 		// Second, project the acceleration vector onto the movement compoment's right vector to allow for left/right movement 
 		Acceleration += Acceleration.ProjectOnTo(UpdatedComponent->GetRightVector());
@@ -115,6 +164,10 @@ void UMarioLongJumpMovementComponent::PhysSlide(float DeltaTime, int32 Iteration
 	{
 		// Build in function used to calculate the velocity, also applies the friction force  
 		CalcVelocity(DeltaTime, SlideFriction, true, GetMaxBrakingDeceleration());
+		if (Velocity.SizeSquared() > pow(MaxSlideSpeed, 2))
+		{
+			Velocity = Velocity.GetSafeNormal() * MaxSlideSpeed;
+		}
 	}
 	// Needed helper function
 	ApplyRootMotionToVelocity(DeltaTime);
@@ -145,14 +198,14 @@ void UMarioLongJumpMovementComponent::PhysSlide(float DeltaTime, int32 Iteration
 		SlideAlongSurface(TimeStep, (1.f - Hit.Time), Hit.Normal, Hit, true);
 	}
 
-	// Second check if character is not on a surface or if speed is less then min slide speed
+	// Second saftey check so that character does not slide forever 
 	FHitResult NewSurfaceHit;
 	if (!GetSlideSurface(NewSurfaceHit) || Velocity.SizeSquared() < pow(MinSlideSpeed, 2))
 	{
 		ExitSlide();
 	}
 
-	// Update Outgoing Velocity & Acceleration
+	// Update Outgoing Velocity & Acceleration, the checks are needed helper functions
 	if (!bJustTeleported && !HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())
 	{
 		// Velocity is updated based off if there was a collision or not 

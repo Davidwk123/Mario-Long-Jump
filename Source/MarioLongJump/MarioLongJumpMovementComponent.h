@@ -28,25 +28,35 @@ public:
 	UPROPERTY(Transient)
 	class AMarioLongJumpCharacter* MarioLongJumpCharacterOwner;
 
+	// Function to check if a custom movement is being used
+	bool IsCustomMovementMode(ECustomMovementMode InCustomMovementMode) const;
+
 	// Slide Variables 
 	float MinSlideSpeed = 400;
 	float MaxSlideSpeed = 800;
-	float SlideImpluseSpeed = 200;
-	float GravitySlideForce;
-	float SlideFriction = .1;
+	float GravitySlideForce = 500;
+	float SlideFriction = .5;
 	
 protected:
 	// Function used to setup component and connect custom characters variables 
 	virtual void InitializeComponent() override;
 
-	// Funtion used to update movement 
-	virtual void OnMovementUpdated(float DeltaSeconds, const FVector& OldLocation, const FVector& OldVelocity) override;
+	//// Funtion used to update movement 
+	//virtual void OnMovementUpdated(float DeltaSeconds, const FVector& OldLocation, const FVector& OldVelocity) override;
 
 	// Overrided function to check if the character can jump
 	virtual bool CanAttemptJump() const override;
 
 	// Overrided function to check if the character can crouch
 	virtual bool CanCrouchInCurrentState() const override;
+
+	//// Overrided function to check if character is moving on ground
+	//virtual bool IsMovingOnGround() const override;
+
+	virtual void UpdateCharacterStateBeforeMovement(float DeltaSeconds) override;
+
+	// Set custom slide movement 
+	virtual void PhysCustom(float deltaTime, int32 Iterations) override;
 
 private:
 	// Checks if character is on the ground first before sliding 
