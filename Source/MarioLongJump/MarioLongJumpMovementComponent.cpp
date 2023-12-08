@@ -20,11 +20,6 @@ void UMarioLongJumpMovementComponent::InitializeComponent()
 	MarioLongJumpCharacterOwner = Cast<AMarioLongJumpCharacter>(GetOwner());
 }
 
-//void UMarioLongJumpMovementComponent::OnMovementUpdated(float DeltaSeconds, const FVector& OldLocation, const FVector& OldVelocity)
-//{
-//	Super::OnMovementUpdated(DeltaSeconds, OldLocation, OldVelocity);
-//}
-
 bool UMarioLongJumpMovementComponent::CanAttemptJump() const
 {
 	// Allow character to jump during slide movement as well
@@ -40,11 +35,6 @@ bool UMarioLongJumpMovementComponent::CanCrouchInCurrentState() const
 	// Character only can crouch on the ground 
 	return (IsMovingOnGround()) && UpdatedComponent && !UpdatedComponent->IsSimulatingPhysics();
 }
-
-//bool UMarioLongJumpMovementComponent::IsMovingOnGround() const
-//{
-//	return Super::IsMovingOnGround();
-//}
 
 void UMarioLongJumpMovementComponent::UpdateCharacterStateBeforeMovement(float DeltaSeconds)
 {
@@ -65,6 +55,8 @@ void UMarioLongJumpMovementComponent::UpdateCharacterStateBeforeMovement(float D
 	// Check to exit slide
 	if (IsCustomMovementMode(CMOVE_Slide) && bWantsToCrouch == false)
 	{
+		// Reset air drag 
+		BrakingDecelerationFalling = 1000.f;
 		SetMovementMode(MOVE_Walking);
 	}
 	
@@ -86,6 +78,45 @@ void UMarioLongJumpMovementComponent::PhysCustom(float deltaTime, int32 Iteratio
 	}
 }
 
+bool UMarioLongJumpMovementComponent::DoJump(bool bReplayingMoves)
+{
+	// Long jump functionality
+	if (IsCustomMovementMode(CMOVE_Slide))
+	{
+		if (CharacterOwner && CharacterOwner->CanJump())
+		{
+			// Jump variables 
+			// Played around with the variables to get a nicer jump
+			AirControl = .4f;
+			GravityScale = .9f;
+			float HorizontalScale = 900.f;
+			float VerticalScale = .5f;
+
+			// Don't jump if we can't move up/down.
+			if (!bConstrainToPlane || FMath::Abs(PlaneConstraintNormal.Z) != 1.f)
+			{
+				// Long jump is decreased Z velocity and increased forward velocity
+				Velocity.Z = FMath::Max<FVector::FReal>(Velocity.Z * VerticalScale, JumpZVelocity * VerticalScale);
+				Velocity += Velocity.GetSafeNormal2D() * HorizontalScale;
+
+				SetMovementMode(MOVE_Falling);
+				return true;
+			}
+		}
+
+		return false;
+	}
+	// Regular jump
+	else
+	{
+		// Reset to orignal values
+		GravityScale = 1.75f;
+		AirControl = 1.0f;
+		return Super::DoJump(false);
+	}
+
+}
+
 bool UMarioLongJumpMovementComponent::GetSlideSurface(FHitResult& SurfaceHit)
 {
 	// Create a raycast that is shot under the player to check if it hits any surface 
@@ -97,6 +128,8 @@ bool UMarioLongJumpMovementComponent::GetSlideSurface(FHitResult& SurfaceHit)
 
 void UMarioLongJumpMovementComponent::EnterSlide()
 {
+	// Decrease air drag to allow for longer slide after character long jumps
+	BrakingDecelerationFalling = 850.f;
 	SetMovementMode(MOVE_Custom, CMOVE_Slide);
 }
 
@@ -115,6 +148,10 @@ void UMarioLongJumpMovementComponent::ExitSlide()
 	// Variables that are needed for the movement udpate function 
 	FHitResult Surfacehit;
 	FQuat NewRotation = FRotationMatrix::MakeFromXZ(UpdatedComponent->GetForwardVector().GetSafeNormal2D(), FVector::UpVector).ToQuat();
+
+	// Reset air drag 
+	BrakingDecelerationFalling = 1000.f;
+	//SlideUnCrouch(false);
 
 	// Delta timestep is a zero vector to stop movement, the rotation is current components foward vector and a regular up vector
 	SafeMoveUpdatedComponent(FVector::ZeroVector, NewRotation, true, Surfacehit);
@@ -147,7 +184,7 @@ void UMarioLongJumpMovementComponent::PhysSlide(float DeltaTime, int32 Iteration
 	// Strafe functionality, allows left and right movement when character is sliding
 	// First check if the dot product between the normalized acceleration(Acceleration is retrived from user's input WASD) and movement component's
 	// right vector is more then .5, meaning that the user had to press the 'A' or 'D' keys 
-	if (FMath::Abs(FVector::DotProduct(Acceleration.GetSafeNormal(), UpdatedComponent->GetRightVector())) > .9f)
+	if (FMath::Abs(FVector::DotProduct(Acceleration.GetSafeNormal(), UpdatedComponent->GetRightVector())) > .99f)
 	{
 		// Second, project the acceleration vector onto the movement compoment's right vector to allow for left/right movement 
 		Acceleration += Acceleration.ProjectOnTo(UpdatedComponent->GetRightVector());
@@ -193,7 +230,7 @@ void UMarioLongJumpMovementComponent::PhysSlide(float DeltaTime, int32 Iteration
 	// Checks when character hits a wall/slope
 	if (Hit.Time < 1.f)
 	{
-		// Needed helper functions to deal with collisions 
+		// Needed helper functions to deal with collisions and sliding phyiscs 
 		HandleImpact(Hit, DeltaTime, TimeStep);
 		SlideAlongSurface(TimeStep, (1.f - Hit.Time), Hit.Normal, Hit, true);
 	}
@@ -213,4 +250,3 @@ void UMarioLongJumpMovementComponent::PhysSlide(float DeltaTime, int32 Iteration
 	}
 	
 }
-

@@ -58,6 +58,9 @@ protected:
 	// Set custom slide movement 
 	virtual void PhysCustom(float deltaTime, int32 Iterations) override;
 
+	// Overrided function for jump 
+	virtual bool DoJump(bool bReplayingMoves) override;
+
 private:
 	// Checks if character is on the ground first before sliding 
 	bool GetSlideSurface(FHitResult& SurfaceHit);
