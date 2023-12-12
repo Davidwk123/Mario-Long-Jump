@@ -41,18 +41,16 @@ protected:
 	// Function used to setup component and connect custom characters variables 
 	virtual void InitializeComponent() override;
 
-	//// Funtion used to update movement 
-	//virtual void OnMovementUpdated(float DeltaSeconds, const FVector& OldLocation, const FVector& OldVelocity) override;
-
 	// Overrided function to check if the character can jump
 	virtual bool CanAttemptJump() const override;
 
 	// Overrided function to check if the character can crouch
 	virtual bool CanCrouchInCurrentState() const override;
 
-	//// Overrided function to check if character is moving on ground
-	//virtual bool IsMovingOnGround() const override;
+	// Overrided function to check if character is moving on ground
+	virtual bool IsMovingOnGround() const override;
 
+	// Overrided function to update crouching movement before sliding/walking
 	virtual void UpdateCharacterStateBeforeMovement(float DeltaSeconds) override;
 
 	// Set custom slide movement 

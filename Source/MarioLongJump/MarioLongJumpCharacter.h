@@ -72,6 +72,9 @@ protected:
 	void Crouch(const FInputActionValue& Value);
 	void UnCrouch(const FInputActionValue& Value);
 
+	// Overrided function to allow jumping when crouched
+	virtual bool CanJumpInternal_Implementation() const;
+
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;

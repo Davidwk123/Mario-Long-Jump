@@ -22,7 +22,6 @@ void UMarioLongJumpMovementComponent::InitializeComponent()
 
 bool UMarioLongJumpMovementComponent::CanAttemptJump() const
 {
-	// Allow character to jump during slide movement as well
 	return Super::CanAttemptJump() || IsCustomMovementMode(CMOVE_Slide);
 }
 
@@ -36,8 +35,16 @@ bool UMarioLongJumpMovementComponent::CanCrouchInCurrentState() const
 	return (IsMovingOnGround()) && UpdatedComponent && !UpdatedComponent->IsSimulatingPhysics();
 }
 
+bool UMarioLongJumpMovementComponent::IsMovingOnGround() const
+{
+	return Super::IsMovingOnGround() || IsCustomMovementMode(CMOVE_Slide);
+}
+
 void UMarioLongJumpMovementComponent::UpdateCharacterStateBeforeMovement(float DeltaSeconds)
 {
+	// Trigger the crouch first, then potentially apply slide movement, bug occurs if this function is placed after movement checks 
+	Super::UpdateCharacterStateBeforeMovement(DeltaSeconds);
+
 	// Check if character is walking and wants to crouch	
 	if (MovementMode == MOVE_Walking && bWantsToCrouch)
 	{
@@ -47,7 +54,6 @@ void UMarioLongJumpMovementComponent::UpdateCharacterStateBeforeMovement(float D
 		//UE_LOG(LogTemp, Warning, TEXT("Surfacehit is: %s"), (GetSlideSurface(PossibleSurfaceHit) ? TEXT("True") : TEXT("False")));
 		if (GetSlideSurface(PossibleSurfaceHit) && Velocity.SizeSquared() > pow(MinSlideSpeed, 2))
 		{
-			//UE_LOG(LogTemp, Warning, TEXT("enteringslide"));
 			EnterSlide();
 		}
 	}
@@ -59,8 +65,6 @@ void UMarioLongJumpMovementComponent::UpdateCharacterStateBeforeMovement(float D
 		BrakingDecelerationFalling = 1000.f;
 		SetMovementMode(MOVE_Walking);
 	}
-	
-	Super::UpdateCharacterStateBeforeMovement(DeltaSeconds);
 }
 
 void UMarioLongJumpMovementComponent::PhysCustom(float deltaTime, int32 Iterations)
@@ -86,7 +90,7 @@ bool UMarioLongJumpMovementComponent::DoJump(bool bReplayingMoves)
 		if (CharacterOwner && CharacterOwner->CanJump())
 		{
 			// Jump variables 
-			// Played around with the variables to get a nicer jump
+			// Played around with the variables to get an ideal long jump
 			AirControl = .4f;
 			GravityScale = .9f;
 			float HorizontalScale = 900.f;
@@ -183,8 +187,8 @@ void UMarioLongJumpMovementComponent::PhysSlide(float DeltaTime, int32 Iteration
 
 	// Strafe functionality, allows left and right movement when character is sliding
 	// First check if the dot product between the normalized acceleration(Acceleration is retrived from user's input WASD) and movement component's
-	// right vector is more then .5, meaning that the user had to press the 'A' or 'D' keys 
-	if (FMath::Abs(FVector::DotProduct(Acceleration.GetSafeNormal(), UpdatedComponent->GetRightVector())) > .99f)
+	// right vector is more then .9, meaning that the user had to press the 'A' or 'D' keys 
+	if (FMath::Abs(FVector::DotProduct(Acceleration.GetSafeNormal(), UpdatedComponent->GetRightVector())) > .9f)
 	{
 		// Second, project the acceleration vector onto the movement compoment's right vector to allow for left/right movement 
 		Acceleration += Acceleration.ProjectOnTo(UpdatedComponent->GetRightVector());
@@ -220,9 +224,13 @@ void UMarioLongJumpMovementComponent::PhysSlide(float DeltaTime, int32 Iteration
 	FVector TimeStep = Velocity * DeltaTime;
 	// Aligns velocity vector to the plane of the surface the character is sliding on, surface could be sloped, 
 	// so we need to adjust the velocity orientation correctly
-	FVector VelocityPlaneCorrected = FVector::VectorPlaneProject(Velocity, SurfaceHit.Normal).GetSafeNormal2D();
+	FVector VelocityPlaneCorrected = FVector::VectorPlaneProject(Velocity, SurfaceHit.Normal).GetSafeNormal();
 	// Apply corrected velocity to rotation X axis and SurfaceHit's normal to the Z axis
 	FQuat NewRotation = FRotationMatrix::MakeFromXZ(VelocityPlaneCorrected, SurfaceHit.Normal).ToQuat();
+
+	//FVector Start = SurfaceHit.ImpactPoint;
+	//FVector End = Start + VelocityPlaneCorrected * 100.f;
+	//DrawDebugLine(GetWorld(), Start, End, FColor::Green, false, -1, 0, 2.0f);
 
 	// Helper function that applies slide displacement 
 	SafeMoveUpdatedComponent(TimeStep, NewRotation, true, Hit);
