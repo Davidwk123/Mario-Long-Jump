@@ -33,7 +33,7 @@ public:
 
 	// Slide Variables 
 	float MinSlideSpeed = 400;
-	float MaxSlideSpeed = 800;
+	float MaxSlideSpeed = 550;
 	float GravitySlideForce = 500;
 	float SlideFriction = .5;
 	
@@ -69,4 +69,7 @@ private:
 
 	// Sliding functionality
 	void PhysSlide(float DeltaTime, int32 Iterations);
+
+	// Forward direction of character when starting slide
+	FVector SlideCharacterDirection = FVector::ZeroVector;
 };

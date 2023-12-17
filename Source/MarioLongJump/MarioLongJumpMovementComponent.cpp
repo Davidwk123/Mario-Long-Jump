@@ -45,7 +45,9 @@ void UMarioLongJumpMovementComponent::UpdateCharacterStateBeforeMovement(float D
 	// Trigger the crouch first, then potentially apply slide movement, bug occurs if this function is placed after movement checks 
 	Super::UpdateCharacterStateBeforeMovement(DeltaSeconds);
 
-	// Check if character is walking and wants to crouch	
+	
+
+	// Check if wants to crouch	
 	if (MovementMode == MOVE_Walking && bWantsToCrouch)
 	{
 		//UE_LOG(LogTemp, Warning, TEXT("walking and is croching"));
@@ -58,7 +60,15 @@ void UMarioLongJumpMovementComponent::UpdateCharacterStateBeforeMovement(float D
 		}
 	}
 
-	// Check to exit slide
+	// Check if character is walking 
+	if (MovementMode == MOVE_Walking)
+	{
+		// Resets direction/rotation 
+		SlideCharacterDirection = FVector::ZeroVector;
+		RotationRate.Yaw = 500.f;
+	}
+
+	// Check if character stops sliding 
 	if (IsCustomMovementMode(CMOVE_Slide) && bWantsToCrouch == false)
 	{
 		// Reset air drag 
@@ -91,9 +101,10 @@ bool UMarioLongJumpMovementComponent::DoJump(bool bReplayingMoves)
 		{
 			// Jump variables 
 			// Played around with the variables to get an ideal long jump
-			AirControl = .4f;
+			RotationRate = FRotator::ZeroRotator;
+			AirControl = .3f;
 			GravityScale = .9f;
-			float HorizontalScale = 900.f;
+			float ForwardScale = 900.f;
 			float VerticalScale = .5f;
 
 			// Don't jump if we can't move up/down.
@@ -101,7 +112,10 @@ bool UMarioLongJumpMovementComponent::DoJump(bool bReplayingMoves)
 			{
 				// Long jump is decreased Z velocity and increased forward velocity
 				Velocity.Z = FMath::Max<FVector::FReal>(Velocity.Z * VerticalScale, JumpZVelocity * VerticalScale);
-				Velocity += Velocity.GetSafeNormal2D() * HorizontalScale;
+				Velocity += Velocity.GetSafeNormal2D() * ForwardScale;
+
+				// Get current direction of player before they land 
+				SlideCharacterDirection = UpdatedComponent->GetForwardVector();
 
 				SetMovementMode(MOVE_Falling);
 				return true;
@@ -133,7 +147,7 @@ bool UMarioLongJumpMovementComponent::GetSlideSurface(FHitResult& SurfaceHit)
 void UMarioLongJumpMovementComponent::EnterSlide()
 {
 	// Decrease air drag to allow for longer slide after character long jumps
-	BrakingDecelerationFalling = 850.f;
+	BrakingDecelerationFalling = 820.f;
 	SetMovementMode(MOVE_Custom, CMOVE_Slide);
 }
 
@@ -153,9 +167,10 @@ void UMarioLongJumpMovementComponent::ExitSlide()
 	FHitResult Surfacehit;
 	FQuat NewRotation = FRotationMatrix::MakeFromXZ(UpdatedComponent->GetForwardVector().GetSafeNormal2D(), FVector::UpVector).ToQuat();
 
+	// Reset rotation
+	RotationRate.Yaw = 500.f;
 	// Reset air drag 
 	BrakingDecelerationFalling = 1000.f;
-	//SlideUnCrouch(false);
 
 	// Delta timestep is a zero vector to stop movement, the rotation is current components foward vector and a regular up vector
 	SafeMoveUpdatedComponent(FVector::ZeroVector, NewRotation, true, Surfacehit);
@@ -182,16 +197,28 @@ void UMarioLongJumpMovementComponent::PhysSlide(float DeltaTime, int32 Iteration
 		return;
 	}
 
-	// Apply gravity(type of acceleration)
+	// Apply gravity to allow increased speed down slopes 
 	Velocity += FVector::DownVector * GravitySlideForce * DeltaTime;
 
 	// Strafe functionality, allows left and right movement when character is sliding
 	// First check if the dot product between the normalized acceleration(Acceleration is retrived from user's input WASD) and movement component's
-	// right vector is more then .9, meaning that the user had to press the 'A' or 'D' keys 
-	if (FMath::Abs(FVector::DotProduct(Acceleration.GetSafeNormal(), UpdatedComponent->GetRightVector())) > .9f)
+	// right vector is more then .5, meaning that the user is pressing the 'A' or 'D' key
+	float StrafeThreshold = FVector::DotProduct(Acceleration.GetSafeNormal(), UpdatedComponent->GetRightVector());
+	if (FMath::Abs(StrafeThreshold) > .5f)
 	{
-		// Second, project the acceleration vector onto the movement compoment's right vector to allow for left/right movement 
-		Acceleration += Acceleration.ProjectOnTo(UpdatedComponent->GetRightVector());
+		// Set accelration to zero so that charcter's direction does not change 
+		Acceleration = FVector::ZeroVector;
+		FVector Displacement = FVector::ZeroVector;
+		float LaterlImpulse = Velocity.Length() * .5f;
+		
+		if (StrafeThreshold != 0)
+		{
+			Displacement = UpdatedComponent->GetRightVector() * LaterlImpulse * StrafeThreshold;
+		}
+		
+		// Move the character left/right by applying the displacement helper function
+		UpdatedComponent->MoveComponent(Displacement * DeltaTime, UpdatedComponent->GetComponentRotation(), true);
+		
 	}
 	else
 	{
@@ -205,9 +232,17 @@ void UMarioLongJumpMovementComponent::PhysSlide(float DeltaTime, int32 Iteration
 	{
 		// Build in function used to calculate the velocity, also applies the friction force  
 		CalcVelocity(DeltaTime, SlideFriction, true, GetMaxBrakingDeceleration());
+
+		// Check if velocity hits max speed
 		if (Velocity.SizeSquared() > pow(MaxSlideSpeed, 2))
 		{
 			Velocity = Velocity.GetSafeNormal() * MaxSlideSpeed;
+		}
+
+		// Check if player long jumped, then apply current direction to slide velocity
+		if (SlideCharacterDirection != FVector::ZeroVector)
+		{
+			Velocity = Velocity.ProjectOnTo(SlideCharacterDirection).GetSafeNormal() * Velocity.Length();
 		}
 	}
 	// Needed helper function
@@ -221,19 +256,17 @@ void UMarioLongJumpMovementComponent::PhysSlide(float DeltaTime, int32 Iteration
 	FVector OldLocation = UpdatedComponent->GetComponentLocation();
 	// FHitResult variable is needed in case character collides with a wall
 	FHitResult Hit;
+	// How much player will move each slide 
 	FVector TimeStep = Velocity * DeltaTime;
-	// Aligns velocity vector to the plane of the surface the character is sliding on, surface could be sloped, 
-	// so we need to adjust the velocity orientation correctly
-	FVector VelocityPlaneCorrected = FVector::VectorPlaneProject(Velocity, SurfaceHit.Normal).GetSafeNormal();
-	// Apply corrected velocity to rotation X axis and SurfaceHit's normal to the Z axis
-	FQuat NewRotation = FRotationMatrix::MakeFromXZ(VelocityPlaneCorrected, SurfaceHit.Normal).ToQuat();
 
-	//FVector Start = SurfaceHit.ImpactPoint;
-	//FVector End = Start + VelocityPlaneCorrected * 100.f;
-	//DrawDebugLine(GetWorld(), Start, End, FColor::Green, false, -1, 0, 2.0f);
+	// Debug
+	/*FVector Start = SurfaceHit.ImpactPoint;
+	FVector End = Start + UpdatedComponent->GetForwardVector() * 100.f;
+	DrawDebugLine(GetWorld(), Start, End, FColor::Green, false, -1, 0, 2.0f);
+	UE_LOG(LogTemp, Log, TEXT("Character Acceleration: X = %f"), Velocity.Length());*/
 
 	// Helper function that applies slide displacement 
-	SafeMoveUpdatedComponent(TimeStep, NewRotation, true, Hit);
+	SafeMoveUpdatedComponent(TimeStep, UpdatedComponent->GetComponentQuat(), true, Hit);
 
 	// Checks when character hits a wall/slope
 	if (Hit.Time < 1.f)
