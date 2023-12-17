@@ -137,7 +137,7 @@ bool UMarioLongJumpMovementComponent::DoJump(bool bReplayingMoves)
 				SetMovementMode(MOVE_Falling);
 
 				// Long jump check
-				HUD->GetHUDWidget()->SetCurrentMovement(FText::FromString(TEXT("Currenlty Long jumping")));
+				HUD->GetHUDWidget()->SetCurrentMovement(FText::FromString(TEXT("Currently Long jumping")));
 
 				return true;
 			}
@@ -153,7 +153,7 @@ bool UMarioLongJumpMovementComponent::DoJump(bool bReplayingMoves)
 		AirControl = 1.0f;
 
 		// Regular jump check
-		HUD->GetHUDWidget()->SetCurrentMovement(FText::FromString(TEXT("Currenlty Jumping")));
+		HUD->GetHUDWidget()->SetCurrentMovement(FText::FromString(TEXT("Currently Jumping")));
 
 		return Super::DoJump(false);
 	}
