@@ -1,5 +1,5 @@
 # Mario-Long-Jump
-<img src="https://github.com/Davidwk123/Mario-Long-Jump/assets/74224822/6a02742d-8734-442d-b6c5-f91b67bd80d3" alt="ValShootingMechanicG">
+<img src="https://github.com/Davidwk123/Mario-Long-Jump/assets/74224822/33cc7f4d-c4fb-403b-8c11-432bab678a22" alt="MarioLongJump">
 
 Part of the movement mechanic in most 3D Mario games Developed with Unreal Engine 5.
 But have been referencing  the mechanic specifically from Super Mario 3D World.
