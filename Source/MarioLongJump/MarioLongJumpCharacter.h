@@ -58,6 +58,9 @@ public:
 
 	// Used to define Collision params when raycasts are called, used to prevent the casts from getting triggered by this character and other actors 
 	FCollisionQueryParams GetIgnoreCharacterParams() const;
+
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
 	
 
 protected:

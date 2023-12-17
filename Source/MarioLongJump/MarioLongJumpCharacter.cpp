@@ -11,6 +11,8 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "MarioLongJumpMovementComponent.h"
+#include "MarioLongJumpHUD.h"
+#include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -19,6 +21,8 @@ DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 AMarioLongJumpCharacter::AMarioLongJumpCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer.SetDefaultSubobjectClass<UMarioLongJumpMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
+	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	PrimaryActorTick.bCanEverTick = true;
 
 	// Assign custom movement compenent to character's current movement component
 	MarioLongJumpMovementComponent = Cast<UMarioLongJumpMovementComponent>(GetCharacterMovement());
@@ -73,6 +77,26 @@ FCollisionQueryParams AMarioLongJumpCharacter::GetIgnoreCharacterParams() const
 	return QueryParams;
 }
 
+void AMarioLongJumpCharacter::Tick(float DeltaTime)
+{
+	// Get HUDWidget
+	AMarioLongJumpHUD* HUD = Cast<AMarioLongJumpHUD>(UGameplayStatics::GetPlayerController(this, 0)->GetHUD());
+
+	// Idle info
+	if (GetCharacterMovement()->Velocity.SquaredLength() <= 0)
+	{
+		if (bIsCrouched)
+		{
+			HUD->GetHUDWidget()->SetCurrentMovement(FText::FromString(TEXT("Crouch Idle")));
+		}
+		else
+		{
+			HUD->GetHUDWidget()->SetCurrentMovement(FText::FromString(TEXT("Idle, use the 'WASD' keys to run around")));
+		}
+		
+	}
+}
+
 void AMarioLongJumpCharacter::BeginPlay()
 {
 	// Call the base class  
@@ -120,7 +144,7 @@ void AMarioLongJumpCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
-
+	 
 	if (Controller != nullptr)
 	{
 		// find out which way is forward

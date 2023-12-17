@@ -1,6 +1,8 @@
 #include "MarioLongJumpMovementComponent.h"
 #include "MarioLongJumpCharacter.h"
 #include "Components/CapsuleComponent.h"
+#include "MarioLongJumpHUD.h"
+#include "Kismet/GameplayStatics.h"
 
 UMarioLongJumpMovementComponent::UMarioLongJumpMovementComponent()
 {
@@ -45,17 +47,19 @@ void UMarioLongJumpMovementComponent::UpdateCharacterStateBeforeMovement(float D
 	// Trigger the crouch first, then potentially apply slide movement, bug occurs if this function is placed after movement checks 
 	Super::UpdateCharacterStateBeforeMovement(DeltaSeconds);
 
-	
+	// Get HUDWidget
+	AMarioLongJumpHUD* HUD = Cast<AMarioLongJumpHUD>(UGameplayStatics::GetPlayerController(this, 0)->GetHUD());
 
 	// Check if wants to crouch	
 	if (MovementMode == MOVE_Walking && bWantsToCrouch)
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("walking and is croching"));
 		FHitResult PossibleSurfaceHit;
 		// Saftey checks
-		//UE_LOG(LogTemp, Warning, TEXT("Surfacehit is: %s"), (GetSlideSurface(PossibleSurfaceHit) ? TEXT("True") : TEXT("False")));
 		if (GetSlideSurface(PossibleSurfaceHit) && Velocity.SizeSquared() > pow(MinSlideSpeed, 2))
 		{
+			// Crouch slide check
+			HUD->GetHUDWidget()->SetCurrentMovement(FText::FromString(TEXT("Currently Crouch sliding\nPress 'Spacebar' or bottom button on controller to long jump")));
+
 			EnterSlide();
 		}
 	}
@@ -66,6 +70,16 @@ void UMarioLongJumpMovementComponent::UpdateCharacterStateBeforeMovement(float D
 		// Resets direction/rotation 
 		SlideCharacterDirection = FVector::ZeroVector;
 		RotationRate.Yaw = 500.f;
+		
+		// Walking/crouching check
+		if (IsCrouching())
+		{
+			HUD->GetHUDWidget()->SetCurrentMovement(FText::FromString(TEXT("Currently Crouching\n")));
+		}
+		else
+		{
+			HUD->GetHUDWidget()->SetCurrentMovement(FText::FromString(TEXT("Currently Running\nPress 'Ctrl' or left trigger on controller to crouch slide")));
+		}
 	}
 
 	// Check if character stops sliding 
@@ -94,6 +108,9 @@ void UMarioLongJumpMovementComponent::PhysCustom(float deltaTime, int32 Iteratio
 
 bool UMarioLongJumpMovementComponent::DoJump(bool bReplayingMoves)
 {
+	// Get HUDWidget
+	AMarioLongJumpHUD* HUD = Cast<AMarioLongJumpHUD>(UGameplayStatics::GetPlayerController(this, 0)->GetHUD());
+
 	// Long jump functionality
 	if (IsCustomMovementMode(CMOVE_Slide))
 	{
@@ -118,6 +135,10 @@ bool UMarioLongJumpMovementComponent::DoJump(bool bReplayingMoves)
 				SlideCharacterDirection = UpdatedComponent->GetForwardVector();
 
 				SetMovementMode(MOVE_Falling);
+
+				// Long jump check
+				HUD->GetHUDWidget()->SetCurrentMovement(FText::FromString(TEXT("Currenlty Long jumping")));
+
 				return true;
 			}
 		}
@@ -130,6 +151,10 @@ bool UMarioLongJumpMovementComponent::DoJump(bool bReplayingMoves)
 		// Reset to orignal values
 		GravityScale = 1.75f;
 		AirControl = 1.0f;
+
+		// Regular jump check
+		HUD->GetHUDWidget()->SetCurrentMovement(FText::FromString(TEXT("Currenlty Jumping")));
+
 		return Super::DoJump(false);
 	}
 
