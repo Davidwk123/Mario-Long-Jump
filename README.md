@@ -8,7 +8,7 @@ Attempted to develop Mario's long jump, the long jump is triggered by moving, pr
 
 Used Unreal Engine's third person project framework.
 
-Used delgoodie's Character Movement Component series as a guide to implement the custom crouch/long jump fuctionality: https://www.youtube.com/playlist?list=PLXJlkahwiwPmeABEhjwIALvxRSZkzoQpk
+Used delgoodie's Character Movement Component series as a guide to implement the custom slide/crouch fuctionality: https://www.youtube.com/playlist?list=PLXJlkahwiwPmeABEhjwIALvxRSZkzoQpk
 
 Download on itch.io to play: https://davidwk1738.itch.io/mario-long-jump
 
